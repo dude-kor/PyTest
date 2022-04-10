@@ -1,30 +1,56 @@
+# number
+import re
+# csv
+import csv
+# selenium
 import selenium
 from selenium import webdriver
-from selenium.webdriver import ActionChains
-
-from selenium.webdriver.common.keys import Keys
+# Prevent Pass Warnings
+from selenium.webdriver.chrome.service import Service
+# Prevent find_element Warnings
 from selenium.webdriver.common.by import By
 
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import Select
-from selenium.webdriver.support.ui import WebDriverWait
+URL = 'https://www.eiass.go.kr/biz/base/info/perList.do?menu=biz&biz_gubn=M&sKey=ADDR'
 
-# chromedriver 해당 경로
-drPath = '../../../../../Selenium/chromedriver'
+# Selenium Error Code : 0x1F
+# https://choihyuunmin.tistory.com/82
+chrome_options = webdriver.ChromeOptions()
+chrome_options.add_experimental_option('excludeSwitches',["enable-logging"])       
 
-driver =webdriver.Chrome(executable_path=drPath)
+# DeprecationWarning: executable_path has been deprecated, please pass in a Service object
+driver_path = Service('C:\Selenium\chromedriver.exe')
+driver = webdriver.Chrome(service=driver_path,options=chrome_options)
+driver.get(url=URL)
 
-URL = 'https://www.eiass.go.kr/biz/base/info/perList.do?menu=biz&biz_gubn=M'
+search_vector = ['제주도','서귀포','제주특별자치도']
 
-sVal = ['제주도','서귀포','제주특별자치도']
-
-URL_ = URL + '&sKey=ADDR&sVal=' + sVal[1]
-
-driver.get(url=URL_)
-
-try:
-       total = EC.presence_of_element_located((By.CLASS_NAME, 'tbl01_wrap > span'))
-finally:
-       driver.quit()
+for key in search_vector:
+       # Find Search Box
+       # DeprecationWarning: find_element_by_css_selector is deprecated. search = driver.find_element_by_css_selector('#sVal')
+       search = driver.find_element(by=By.CSS_SELECTOR,value='#sVal')
+       # Clear Search Box
+       search.clear()
+       # Send Key to Search Box
+       search.send_keys(key)
+       # Search w/ Key
+       search.submit()
        
-print(total)
+       # Find Total Number
+       total = driver.find_element(by=By.CSS_SELECTOR,value='.tbl01_wrap > span')
+       # Get Text
+       total_text = total.get_attribute('innerText')
+       # Translate to Number
+       total_number = re.sub(r'[^0-9]','',total_text)
+       
+       if total_number == 0:
+              break
+       
+       # Find Total Page Number
+       total_page = int(total_number)//10
+       
+       for page in range(total_page):
+              URL_ = URL + '&pn=' + str(page+1)
+              print(URL_)
+       
+       print(key+"의 값은 : "+total_number)
+driver.quit()       
